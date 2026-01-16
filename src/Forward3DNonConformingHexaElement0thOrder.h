@@ -23,6 +23,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //-------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------
+// Modifications Copyright (c) 2025 Zuwei Huang
+// This file is based on original work by Yoshiya Usui, with modifications.
+// The modified version is released under the GNU General Public License version 3 (GPLv3).
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+//
+// Note: This file is dual-licensed:
+// 1. Original code: MIT License
+// 2. Modifications: GPLv3 License
+// Overall distribution is under the terms of GPLv3.
+//-------------------------------------------------------------------------------------------------------
 #ifndef DBLDEF_FORWARD_3D_NONCONFORMING_HEXA_ELEMENT_0TH_ORDER
 #define DBLDEF_FORWARD_3D_NONCONFORMING_HEXA_ELEMENT_0TH_ORDER
 
