@@ -74,6 +74,7 @@ ObservedData* ObservedData::getInstance() {
 ObservedData::ObservedData() :
 	m_numAllStations(0),
 	m_numStationsCSEM(0),
+	m_numStationsCSEMAmplitudeAndPhase(0),
 	m_numStationsMT(0),
 	m_numStationsApparentResistivityAndPhase(0),
 	m_numStationsHTF(0),
@@ -93,10 +94,14 @@ ObservedData::ObservedData() :
 	m_numOfFrequenciesCalculatedByThisPE(0),
 	m_IDsOfFrequenciesCalculatedByThisPE(NULL),
 	m_numCSEMInterpolatorVectors(NULL),
+	m_numCSEMInterpolatorVectorsAmplitudeAndPhase(NULL),
 	m_valuesOfFrequenciesCalculatedByThisPE(NULL),
 	m_observedStationCSEM(NULL),
+	m_observedStationCSEMAmplitudeAndPhase(NULL),
 	m_numStationsCSEMOfDifferentSource(NULL),
+	m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase(NULL),
 	m_sourceIDOfStationPoint(NULL),
+	m_sourceIDOfStationPointAmplitudeAndPhase(NULL),
 	m_observedStationMT(NULL),
 	m_observedStationApparentResistivityAndPhase(NULL),
 	m_observedStationHTF(NULL),
@@ -142,24 +147,44 @@ ObservedData::~ObservedData() {
 		m_observedStationCSEM = NULL;
 	}
 
+	if (m_observedStationCSEMAmplitudeAndPhase != NULL) {
+		delete[] m_observedStationCSEMAmplitudeAndPhase;
+		m_observedStationCSEMAmplitudeAndPhase = NULL;
+	}
+
 	if (m_observedStationMT != NULL) {
 		delete[] m_observedStationMT;
 		m_observedStationMT = NULL;
 	}
-
+	
 	if (m_sourceIDOfStationPoint != NULL) {
 		delete[] m_sourceIDOfStationPoint;
 		m_sourceIDOfStationPoint = NULL;
 	}
 
+	if (m_sourceIDOfStationPointAmplitudeAndPhase != NULL) {
+		delete[] m_sourceIDOfStationPointAmplitudeAndPhase;
+		m_sourceIDOfStationPointAmplitudeAndPhase = NULL;
+	}
+	
 	if (m_numStationsCSEMOfDifferentSource != NULL) {
 		delete[] m_numStationsCSEMOfDifferentSource;
 		m_numStationsCSEMOfDifferentSource = NULL;
 	}
 
+	if (m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase != NULL) {
+		delete[] m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase;
+		m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase = NULL;
+	}
+	
 	if (m_sourceIDStationNum != NULL) {
 		delete[] m_sourceIDStationNum;
 		m_sourceIDStationNum = NULL;
+	}
+
+	if (m_sourceIDStationNumAmplitudeAndPhase != NULL) {
+		delete[] m_sourceIDStationNumAmplitudeAndPhase;
+		m_sourceIDStationNumAmplitudeAndPhase = NULL;
 	}
 
 	if (m_observedStationApparentResistivityAndPhase != NULL) {
@@ -349,6 +374,7 @@ void ObservedData::inputObservedData() {
 		}
 		m_numOfTotalSources = m_numArbitraryElectricalDipole + m_numArbitraryMagneticDipole + m_numStaightLineSource + m_numSegmentedLineSource;
 		m_numCSEMInterpolatorVectors = new int[m_numOfTotalSources];
+		m_numCSEMInterpolatorVectorsAmplitudeAndPhase = new int[m_numOfTotalSources];
 		OutputFiles::m_logFile << "#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
 		OutputFiles::m_logFile << "# Total number of sources : " << m_numOfTotalSources << " ." << std::endl;
 
@@ -501,6 +527,61 @@ void ObservedData::inputObservedData() {
 					const int nFreq = m_observedStationCSEM[index].getTotalNumberOfFrequency();
 					for (int ifrq = 0; ifrq < nFreq; ++ifrq) {
 						checkAndAddNewFrequency(m_observedStationCSEM[index].getFrequencyValues(ifrq));
+					}
+				}
+			}
+		}
+		else if (strbuf == "CSEMAMPPHA") {
+
+			if (pAnalysisControl->getTypeOfElectromagneticMethod() != AnalysisControl::CSEM) {
+				OutputFiles::m_logFile << "You can not use CSEM data in MT module !!" << std::endl;
+				exit(1);
+			}
+			int check_m_numOfTotalSources;
+			inFile >> check_m_numOfTotalSources;
+			if (check_m_numOfTotalSources != m_numOfTotalSources) {
+				OutputFiles::m_logFile << "Error : Source number " << check_m_numOfTotalSources << " mismatch source.dat " << m_numOfTotalSources << std::endl;
+				exit(1);
+			}
+			m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase = new int[m_numOfTotalSources];
+			m_sourceIDOfStationPointAmplitudeAndPhase = new int[m_numOfTotalSources];
+			m_sourceIDStationNumAmplitudeAndPhase = new int[m_numOfTotalSources];
+			if (m_numStationsCSEMAmplitudeAndPhase != 0) {
+				m_numStationsCSEMAmplitudeAndPhase = 0;
+			}
+			for (int iSource = 0; iSource < m_numOfTotalSources; iSource++) {
+				inFile >> m_sourceIDOfStationPointAmplitudeAndPhase[iSource] >> m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase[iSource];
+				if (m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase[iSource] > 0) {
+					if (!(std::find(m_sourceID.begin(), m_sourceID.end(), m_sourceIDOfStationPointAmplitudeAndPhase[iSource]) != m_sourceID.end())) {
+						OutputFiles::m_logFile << "Error : Source ID " << m_sourceIDOfStationPointAmplitudeAndPhase[iSource] << " do not consistent with source.dat !!" << std::endl;
+						exit(1);
+					}
+					m_numStationsCSEMAmplitudeAndPhase += m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase[iSource];
+				}
+			}
+
+			localSourceStationNumToGlobalSourceStationNumAmplitudeAndPhase();
+			if (m_numStationsCSEMAmplitudeAndPhase > 0) {
+				m_observedStationCSEMAmplitudeAndPhase = new ObservedDataStationCSEMAmplitudeAndPhase[m_numStationsCSEMAmplitudeAndPhase];
+			}
+
+			OutputFiles::m_logFile << "# Number of the stations of the Controlled-Source Electromagnetic Method (Amplitude and Phase formart) : " << m_numStationsCSEMAmplitudeAndPhase << std::endl;
+			OutputFiles::m_logFile << "# SourceID     Station ID     Station ID (Ref)  Owner Element  Electric field" << std::endl;
+
+			std::string tmpchar;
+			for (int iSource = 0; iSource < m_numOfTotalSources; iSource++) {
+				for (int iStation = 0; iStation < m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase[iSource]; iStation++) {
+					int index = changeLocalSourceIDArrangeToGlobalSourceIDArrangeAmplitudeAndPhase(m_sourceIDOfStationPointAmplitudeAndPhase[iSource], iStation);
+					m_observedStationCSEMAmplitudeAndPhase[index].initializeSourceID(m_sourceIDOfStationPointAmplitudeAndPhase[iSource], iSource);
+					m_observedStationCSEMAmplitudeAndPhase[index].inputObservedData(inFile);
+					const int stationID = m_observedStationCSEMAmplitudeAndPhase[index].getStationID();
+
+					m_stationID2type.insert(std::map<int, int>::value_type(stationID, ObservedData::CSEMAMPPHA));
+					m_stationID2IDAmongEachStationType.insert(std::map<int, int>::value_type(stationID, index));
+
+					const int nFreq = m_observedStationCSEMAmplitudeAndPhase[index].getTotalNumberOfFrequency();
+					for (int ifrq = 0; ifrq < nFreq; ++ifrq) {
+						checkAndAddNewFrequency(m_observedStationCSEMAmplitudeAndPhase[index].getFrequencyValues(ifrq));
 					}
 				}
 			}
@@ -735,7 +816,7 @@ void ObservedData::inputObservedData() {
 
 	inFile.close();
 
-	m_numAllStations = m_numStationsMT + m_numStationsCSEM + m_numStationsApparentResistivityAndPhase + m_numStationsHTF + m_numStationsVTF
+	m_numAllStations = m_numStationsMT + m_numStationsCSEM + m_numStationsCSEMAmplitudeAndPhase + m_numStationsApparentResistivityAndPhase + m_numStationsHTF + m_numStationsVTF
 		+ m_numStationsPT + m_numStationsNMT + m_numStationsNMT2 + m_numStationsNMT2ApparentResistivityAndPhase;
 
 	OutputFiles::m_logFile << "#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
@@ -746,6 +827,9 @@ void ObservedData::inputObservedData() {
 	}
 	if (m_numStationsCSEM > 0) {
 		OutputFiles::m_logFile << "#  - Number of electromagnetic field stations : " << m_numStationsCSEM << " ." << std::endl;
+	}
+	if (m_numStationsCSEMAmplitudeAndPhase > 0) {
+		OutputFiles::m_logFile << "#  - Number of electromagnetic field amplitude and phase stations : " << m_numStationsCSEMAmplitudeAndPhase << " ." << std::endl;
 	}
 	if (m_numStationsApparentResistivityAndPhase > 0) {
 		OutputFiles::m_logFile << "#  - Number of apparent resistivity & phase stations : " << m_numStationsApparentResistivityAndPhase << " ." << std::endl;
@@ -1026,6 +1110,10 @@ void ObservedData::findElementIncludingEachStation() {
 		m_observedStationCSEM[i].findElementIncludingStation();
 	}
 
+	for (int i = 0; i < m_numStationsCSEMAmplitudeAndPhase; ++i) {
+		m_observedStationCSEMAmplitudeAndPhase[i].findElementIncludingStation();
+	}
+
 	for (int i = 0; i < m_numStationsApparentResistivityAndPhase; ++i) {
 		m_observedStationApparentResistivityAndPhase[i].findElementIncludingStation();
 	}
@@ -1096,6 +1184,14 @@ bool ObservedData::isUseMagneticFieldOfTheStation(const double freq, const int s
 	for (int i = 0; i < m_numStationsCSEM; ++i) {
 		if (staID == m_observedStationCSEM[i].getIDOfMagneticFieldStation()) {
 			if (m_observedStationCSEM[i].getFreqIDsAmongThisPE(freq) >= 0) {
+				return true;
+			}
+		}
+	}
+
+	for (int i = 0; i < m_numStationsCSEMAmplitudeAndPhase; ++i) {
+		if (staID == m_observedStationCSEMAmplitudeAndPhase[i].getIDOfMagneticFieldStation()) {
+			if (m_observedStationCSEMAmplitudeAndPhase[i].getFreqIDsAmongThisPE(freq) >= 0) {
 				return true;
 			}
 		}
@@ -1184,6 +1280,9 @@ ObservedDataStationPoint* ObservedData::getInstanceOfMagneticStation(const int I
 		break;
 	case CSEM:
 		return &m_observedStationCSEM[num];
+		break;
+	case CSEMAMPPHA:
+		return &m_observedStationCSEMAmplitudeAndPhase[num];
 		break;
 	case APP_RES_AND_PHS:
 		return &m_observedStationApparentResistivityAndPhase[num];
@@ -1460,6 +1559,68 @@ void ObservedData::calculateEMFieldOfAllStations(const Forward3D* const ptrForwa
 		m_numCSEMInterpolatorVectors[iSourceOriPol] = fabs(cc2 - cc1);
 	}
 
+	if (m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase != NULL) {
+		int cc1 = m_numInterpolatorVectors;
+		for (int i = 0; i < m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase[iSourceOriPol]; ++i) {
+			int index = getGlobalStationIDFromSourceIDAndLocalIDAmplitudeAndPhase(iSourceOriPol, i);
+			int ifre = m_observedStationCSEMAmplitudeAndPhase[index].getFreqIDsAmongThisPE(freq);
+			m_observedStationCSEMAmplitudeAndPhase[index].initializeElectricField(ifre);
+			m_observedStationCSEMAmplitudeAndPhase[index].initializeHorizontalMagneticField(0);
+			m_observedStationCSEMAmplitudeAndPhase[index].initializeVerticalMagneticField(ifre);
+			if (m_observedStationCSEMAmplitudeAndPhase[index].getFreqIDsAmongThisPE(freq) >= 0) {
+				int rhsVectorIDOfEx(0);
+				int rhsVectorIDOfEy(0);
+				if (m_observedStationCSEMAmplitudeAndPhase[index].isThisStationUseExData()) {
+					rhsVectorIDOfEx = incrementNumInterpolatorVectors();
+				}
+				else {
+					rhsVectorIDOfEx = 0;
+				}
+				if (m_observedStationCSEMAmplitudeAndPhase[index].isThisStationUseEyData()) {
+					rhsVectorIDOfEy = incrementNumInterpolatorVectors();
+				}
+				else {
+					rhsVectorIDOfEy = 0;
+				}
+				m_observedStationCSEMAmplitudeAndPhase[index].calculateElectricField(ptrForward3D, rhsVectorIDOfEx, rhsVectorIDOfEy, ifre);
+			}
+			if (isUseMagneticFieldOfTheStation(freq, m_observedStationCSEMAmplitudeAndPhase[index].getStationID())) {
+				bool useHx(false);
+				bool useHy(false);
+				int rhsVectorIDOfHx(0);
+				int rhsVectorIDOfHy(0);
+				if (m_observedStationCSEMAmplitudeAndPhase[index].isThisStationUseHxData()) {
+					rhsVectorIDOfHx = incrementNumInterpolatorVectors();
+					useHx = true;
+				}
+				else {
+					rhsVectorIDOfHx = 0;
+				}
+				if (m_observedStationCSEMAmplitudeAndPhase[index].isThisStationUseHyData()) {
+					rhsVectorIDOfHy = incrementNumInterpolatorVectors();
+					useHy = true;
+				}
+				else {
+					rhsVectorIDOfHy = 0;
+				}
+				m_observedStationCSEMAmplitudeAndPhase[index].calculateHorizontalMagneticField(ptrForward3D, rhsVectorIDOfHx, rhsVectorIDOfHy, useHx, useHy);
+			}
+			if (m_observedStationCSEMAmplitudeAndPhase[index].getFreqIDsAmongThisPE(freq) >= 0) {
+				int rhsVectorIDOfHz(0);
+				if (m_observedStationCSEMAmplitudeAndPhase[index].isThisStationUseHzData()) {
+					rhsVectorIDOfHz = incrementNumInterpolatorVectors();
+				}
+				else {
+					rhsVectorIDOfHz = 0;
+				}
+				m_observedStationCSEMAmplitudeAndPhase[index].calculateVerticalMagneticField(ptrForward3D, rhsVectorIDOfHz, ifre);
+			}
+		}
+		int cc2 = m_numInterpolatorVectors;
+		m_numCSEMInterpolatorVectorsAmplitudeAndPhase[iSourceOriPol] = fabs(cc2 - cc1);
+	}
+
+
 	for (int i = 0; i < m_numStationsApparentResistivityAndPhase; ++i) {
 		m_observedStationApparentResistivityAndPhase[i].initializeElectricField(iSourceOriPol);
 		m_observedStationApparentResistivityAndPhase[i].initializeHorizontalMagneticField(iSourceOriPol);
@@ -1580,6 +1741,10 @@ void ObservedData::calculateResponseFunctionOfAllStations(const int freqIDAmongT
 		m_observedStationCSEM[i].calculateDataTensor(freq, getInstanceOfMagneticStation(m_observedStationCSEM[i].getIDOfMagneticFieldStation()), icount);
 	}
 
+	for (int i = 0; i < m_numStationsCSEMAmplitudeAndPhase; ++i) {
+		m_observedStationCSEMAmplitudeAndPhase[i].calculateDataTensor(freq, getInstanceOfMagneticStation(m_observedStationCSEMAmplitudeAndPhase[i].getIDOfMagneticFieldStation()), icount);
+	}
+
 	for (int i = 0; i < m_numStationsApparentResistivityAndPhase; ++i) {
 		m_observedStationApparentResistivityAndPhase[i].calculateApparentResistivityAndPhase(freq, getInstanceOfMagneticStation(m_observedStationApparentResistivityAndPhase[i].getIDOfMagneticFieldStation()), icount);
 	}
@@ -1625,6 +1790,10 @@ void ObservedData::initializeResponseFunctionsAndErrorsOfAllStations() {
 
 	for (int i = 0; i < m_numStationsCSEM; ++i) {
 		m_observedStationCSEM[i].initializeDataTensorsAndErrors();
+	}
+
+	for (int i = 0; i < m_numStationsCSEMAmplitudeAndPhase; ++i) {
+		m_observedStationCSEMAmplitudeAndPhase[i].initializeDataTensorsAndErrors();
 	}
 
 	for (int i = 0; i < m_numStationsApparentResistivityAndPhase; ++i) {
@@ -1681,6 +1850,11 @@ void ObservedData::allocateMemoryForCalculatedValuesOfAllStations() {
 	for (int i = 0; i < m_numStationsCSEM; ++i) {
 		m_observedStationCSEM[i].setupFrequenciesCalculatedByThisPE(nFreqCalculatedByThisPE, freqCalculatedByThisPE);
 		m_observedStationCSEM[i].allocateMemoryForCalculatedValues();
+	}
+
+	for (int i = 0; i < m_numStationsCSEMAmplitudeAndPhase; ++i) {
+		m_observedStationCSEMAmplitudeAndPhase[i].setupFrequenciesCalculatedByThisPE(nFreqCalculatedByThisPE, freqCalculatedByThisPE);
+		m_observedStationCSEMAmplitudeAndPhase[i].allocateMemoryForCalculatedValues();
 	}
 
 	for (int i = 0; i < m_numStationsApparentResistivityAndPhase; ++i) {
@@ -1753,6 +1927,20 @@ void ObservedData::outputCalculatedValuesOfAllStations() const {
 
 		for (int i = 0; i < m_numStationsCSEM; ++i) {
 			m_observedStationCSEM[i].outputCalculatedValues();
+		}
+
+	}
+
+	if (m_observedStationCSEMAmplitudeAndPhase > 0) {
+		fprintf(OutputFiles::m_csvFile, "CSEMAMPPHA,\n");
+		fprintf(OutputFiles::m_csvFile, "     SourceID,        StaID,        Freq[Hz],");
+		fprintf(OutputFiles::m_csvFile, "     log10(Amp)(Ex)_Cal,     Pha(Ex)_Cal,     log10(Amp)(Ey)_Cal,     Pha(Ey)_Cal,     log10(Amp)(Hx)_Cal,     Pha(Hx)_Cal,     log10(Amp)(Hy)_Cal,     Pha(Hy)_Cal,     log10(Amp)(Hz)_Cal,     Pha(Hz)_Cal,");
+		fprintf(OutputFiles::m_csvFile, "     log10(Amp)(Ex)_Res,     Pha(Ex)_Res,     log10(Amp)(Ey)_Res,     Pha(Ey)_Res,     log10(Amp)(Hx)_Res,     Pha(Hx)_Res,     log10(Amp)(Hy)_Res,     Pha(Hy)_Res,     log10(Amp)(Hz)_Res,     Pha(Hz)_Res,");
+		fprintf(OutputFiles::m_csvFile, "     log10(Amp)(Ex)_Obs,     Pha(Ex)_Obs,     log10(Amp)(Ey)_Obs,     Pha(Ey)_Obs,     log10(Amp)(Hx)_Obs,     Pha(Hx)_Obs,     log10(Amp)(Hy)_Obs,     Pha(Hy)_Obs,     log10(Amp)(Hz)_Obs,     Pha(Hz)_Obs,");
+		fprintf(OutputFiles::m_csvFile, "     log10(Amp)(Ex)_SD,     Pha(Ex)_SD,     log10(Amp)(Ey)_SD,     Pha(Ey)_SD,     log10(Amp)(Hx)_SD,     Pha(Hx)_SD,     log10(Amp)(Hy)_SD,     Pha(Hy)_SD,     log10(Amp)(Hz)_SD,     Pha(Hz)_SD, \n");
+
+		for (int i = 0; i < m_numStationsCSEMAmplitudeAndPhase; ++i) {
+			m_observedStationCSEMAmplitudeAndPhase[i].outputCalculatedValues();
 		}
 
 	}
@@ -1912,6 +2100,22 @@ void ObservedData::calculateInterpolatorVectors(Forward3D* const ptrForward3D, c
 		}
 	}
 
+	if (m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase != NULL) {
+		for (int i = 0; i < m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase[iSourceOriPol]; ++i) {
+
+			int index = getGlobalStationIDFromSourceIDAndLocalIDAmplitudeAndPhase(iSourceOriPol, i);
+			if (m_observedStationCSEMAmplitudeAndPhase[index].getFreqIDsAmongThisPE(freq) >= 0) {
+				m_observedStationCSEMAmplitudeAndPhase[index].calcInterpolatorVectorOfElectricField(ptrForward3D);
+			}
+			if (isUseMagneticFieldOfTheStation(freq, m_observedStationCSEMAmplitudeAndPhase[index].getStationID())) {
+				m_observedStationCSEMAmplitudeAndPhase[index].calcInterpolatorVectorOfHorizontalMagneticField(ptrForward3D);
+			}
+			if (m_observedStationCSEMAmplitudeAndPhase[index].getFreqIDsAmongThisPE(freq) >= 0) {
+				m_observedStationCSEMAmplitudeAndPhase[index].calcInterpolatorVectorOfVerticalMagneticField(ptrForward3D);
+			}
+		}
+	}
+
 	for (int i = 0; i < m_numStationsApparentResistivityAndPhase; ++i) {
 		if (m_observedStationApparentResistivityAndPhase[i].getFreqIDsAmongThisPE(freq) >= 0) {
 			m_observedStationApparentResistivityAndPhase[i].calcInterpolatorVectorOfElectricField(ptrForward3D);
@@ -1984,6 +2188,14 @@ void ObservedData::calculateSensitivityMatrix(std::complex<double>** const deriv
 		const std::complex<double>* derivativesOfEMField = derivatives[iSource];
 		m_observedStationCSEM[i].calculateSensitivityMatrix(freq, nModel,
 			getInstanceOfMagneticStation(m_observedStationCSEM[i].getIDOfMagneticFieldStation()),
+			derivativesOfEMField, sensitivityMatrix);
+	}
+
+	for (int i = 0; i < m_numStationsCSEMAmplitudeAndPhase; ++i) {
+		int iSource = m_observedStationCSEMAmplitudeAndPhase[i].getiSourceOfThisStation();
+		const std::complex<double>* derivativesOfEMField = derivatives[iSource];
+		m_observedStationCSEMAmplitudeAndPhase[i].calculateSensitivityMatrix(freq, nModel,
+			getInstanceOfMagneticStation(m_observedStationCSEMAmplitudeAndPhase[i].getIDOfMagneticFieldStation()),
 			derivativesOfEMField, sensitivityMatrix);
 	}
 
@@ -2077,6 +2289,10 @@ void ObservedData::calculateResidualVectorOfDataThisPE(double* const vector) con
 
 		for (int i = 0; i < m_numStationsCSEM; ++i) {
 			m_observedStationCSEM[i].calculateResidualVectorOfDataThisPE(freq, offset, vector);
+		}
+
+		for (int i = 0; i < m_numStationsCSEMAmplitudeAndPhase; ++i) {
+			m_observedStationCSEMAmplitudeAndPhase[i].calculateResidualVectorOfDataThisPE(freq, offset, vector);
 		}
 
 		for (int i = 0; i < m_numStationsMT; ++i) {
@@ -2320,6 +2536,10 @@ double ObservedData::calculateErrorSumOfSquaresThisPE() const {
 
 	for (int i = 0; i < m_numStationsCSEM; ++i) {
 		misfit += m_observedStationCSEM[i].calculateErrorSumOfSquaresThisPE();
+	}
+
+	for (int i = 0; i < m_numStationsCSEMAmplitudeAndPhase; ++i) {
+		misfit += m_observedStationCSEMAmplitudeAndPhase[i].calculateErrorSumOfSquaresThisPE();
 	}
 
 	for (int i = 0; i < m_numStationsApparentResistivityAndPhase; ++i) {
@@ -2701,6 +2921,18 @@ void ObservedData::outputLocationsOfObservedStationsToVtk() const {
 		OutputFiles::m_vtkFileForObservedStation << std::setw(15) << std::scientific << m_observedStationMT[i].getZCoordOfPoint() << std::endl;
 	}
 
+	for (int i = 0; i < m_numStationsCSEM; ++i) {
+		OutputFiles::m_vtkFileForObservedStation << std::setw(15) << std::scientific << (m_observedStationCSEM[i].getLocationOfPoint()).X << " ";
+		OutputFiles::m_vtkFileForObservedStation << std::setw(15) << std::scientific << (m_observedStationCSEM[i].getLocationOfPoint()).Y << " ";
+		OutputFiles::m_vtkFileForObservedStation << std::setw(15) << std::scientific << m_observedStationCSEM[i].getZCoordOfPoint() << std::endl;
+	}
+
+	for (int i = 0; i < m_numStationsCSEMAmplitudeAndPhase; ++i) {
+		OutputFiles::m_vtkFileForObservedStation << std::setw(15) << std::scientific << (m_observedStationCSEMAmplitudeAndPhase[i].getLocationOfPoint()).X << " ";
+		OutputFiles::m_vtkFileForObservedStation << std::setw(15) << std::scientific << (m_observedStationCSEMAmplitudeAndPhase[i].getLocationOfPoint()).Y << " ";
+		OutputFiles::m_vtkFileForObservedStation << std::setw(15) << std::scientific << m_observedStationCSEMAmplitudeAndPhase[i].getZCoordOfPoint() << std::endl;
+	}
+
 	for (int i = 0; i < m_numStationsApparentResistivityAndPhase; ++i) {
 		OutputFiles::m_vtkFileForObservedStation << std::setw(15) << std::scientific << (m_observedStationApparentResistivityAndPhase[i].getLocationOfPoint()).X << " ";
 		OutputFiles::m_vtkFileForObservedStation << std::setw(15) << std::scientific << (m_observedStationApparentResistivityAndPhase[i].getLocationOfPoint()).Y << " ";
@@ -2756,7 +2988,7 @@ void ObservedData::outputLocationsOfObservedStationsToVtk() const {
 		}
 	}
 
-	const int numCells = m_numStationsMT + m_numStationsApparentResistivityAndPhase + m_numStationsHTF + m_numStationsVTF
+	const int numCells = m_numStationsMT + m_numStationsCSEM + m_numStationsCSEMAmplitudeAndPhase + m_numStationsApparentResistivityAndPhase + m_numStationsHTF + m_numStationsVTF
 		+ m_numStationsPT + m_numStationsNMT + m_numStationsNMT2 * 2 + m_numStationsNMT2ApparentResistivityAndPhase * 2;
 	const int sizeOfCellData = numCells + numPoints;
 
@@ -2764,6 +2996,14 @@ void ObservedData::outputLocationsOfObservedStationsToVtk() const {
 
 	int icount(0);
 	for (int i = 0; i < m_numStationsMT; ++i) {
+		OutputFiles::m_vtkFileForObservedStation << 1 << " " << icount++ << std::endl;
+	}
+
+	for (int i = 0; i < m_numStationsCSEM; ++i) {
+		OutputFiles::m_vtkFileForObservedStation << 1 << " " << icount++ << std::endl;
+	}
+
+	for (int i = 0; i < m_numStationsCSEMAmplitudeAndPhase; ++i) {
 		OutputFiles::m_vtkFileForObservedStation << 1 << " " << icount++ << std::endl;
 	}
 
@@ -2799,6 +3039,14 @@ void ObservedData::outputLocationsOfObservedStationsToVtk() const {
 
 	OutputFiles::m_vtkFileForObservedStation << "CELL_TYPES " << numCells << std::endl;
 	for (int i = 0; i < m_numStationsMT; ++i) {
+		OutputFiles::m_vtkFileForObservedStation << 1 << std::endl;
+	}
+
+	for (int i = 0; i < m_numStationsCSEM; ++i) {
+		OutputFiles::m_vtkFileForObservedStation << 1 << std::endl;
+	}
+
+	for (int i = 0; i < m_numStationsCSEMAmplitudeAndPhase; ++i) {
 		OutputFiles::m_vtkFileForObservedStation << 1 << std::endl;
 	}
 
@@ -2840,6 +3088,14 @@ void ObservedData::outputLocationsOfObservedStationsToVtk() const {
 		OutputFiles::m_vtkFileForObservedStation << m_observedStationMT[i].getStationID() << std::endl;
 	}
 
+	for (int i = 0; i < m_numStationsCSEM; ++i) {
+		OutputFiles::m_vtkFileForObservedStation << m_observedStationCSEM[i].getStationID() << std::endl;
+	}
+
+	for (int i = 0; i < m_numStationsCSEMAmplitudeAndPhase; ++i) {
+		OutputFiles::m_vtkFileForObservedStation << m_observedStationCSEMAmplitudeAndPhase[i].getStationID() << std::endl;
+	}
+
 	for (int i = 0; i < m_numStationsApparentResistivityAndPhase; ++i) {
 		OutputFiles::m_vtkFileForObservedStation << m_observedStationApparentResistivityAndPhase[i].getStationID() << std::endl;
 	}
@@ -2875,6 +3131,14 @@ void ObservedData::outputLocationsOfObservedStationsToVtk() const {
 
 	for (int i = 0; i < m_numStationsMT; ++i) {
 		OutputFiles::m_vtkFileForObservedStation << ObservedData::MT << std::endl;
+	}
+
+	for (int i = 0; i < m_numStationsCSEM; ++i) {
+		OutputFiles::m_vtkFileForObservedStation << ObservedData::CSEM << std::endl;
+	}
+
+	for (int i = 0; i < m_numStationsCSEMAmplitudeAndPhase; ++i) {
+		OutputFiles::m_vtkFileForObservedStation << ObservedData::CSEMAMPPHA << std::endl;
 	}
 
 	for (int i = 0; i < m_numStationsApparentResistivityAndPhase; ++i) {
@@ -3114,12 +3378,43 @@ int ObservedData::changeLocalSourceIDArrangeToGlobalSourceIDArrange(int sourceID
 
 }
 
+int ObservedData::changeLocalSourceIDArrangeToGlobalSourceIDArrangeAmplitudeAndPhase(int sourceID, int iStation) const {
+	//all the data-source ID is decided by source.dat !! 
+	int stationIndex(0);
+	int sourceIndex(-1);
+	auto it = std::find(m_sourceID.begin(), m_sourceID.end(), sourceID);
+	if (it != m_sourceID.end()) {
+		sourceIndex = std::distance(m_sourceID.begin(), it);
+	}
+
+	for (int i = 0; i < sourceIndex; i++) {
+		stationIndex += m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase[i];
+	}
+	stationIndex += iStation;
+
+	return stationIndex;
+
+}
+
 int ObservedData::getGlobalStationIDFromSourceIDAndLocalID(int iSource, int iStation) const {
 	//all the data-source ID is decided by source.dat !! 
 	int stationIndex(0);
 
 	for (int i = 0; i < iSource; i++) {
 		stationIndex += m_sourceIDStationNum[i];
+	}
+	stationIndex += iStation;
+
+	return stationIndex;
+
+}
+
+int ObservedData::getGlobalStationIDFromSourceIDAndLocalIDAmplitudeAndPhase(int iSource, int iStation) const {
+	//all the data-source ID is decided by source.dat !! 
+	int stationIndex(0);
+
+	for (int i = 0; i < iSource; i++) {
+		stationIndex += m_sourceIDStationNumAmplitudeAndPhase[i];
 	}
 	stationIndex += iStation;
 
@@ -3144,6 +3439,23 @@ int ObservedData::localSourceStationNumToGlobalSourceStationNum() const {
 
 }
 
+int ObservedData::localSourceStationNumToGlobalSourceStationNumAmplitudeAndPhase() const {
+
+	const double EPS = 1.0E-8;
+	int count(-1);
+
+	for (int i = 0; i < m_numOfTotalSources; i++) {
+		for (int j = 0; j < m_numOfTotalSources; j++) {
+			if (abs(m_sourceID[i] - m_sourceIDOfStationPointAmplitudeAndPhase[j]) < EPS) {
+				count = j;
+				break;
+			}
+		}
+		m_sourceIDStationNumAmplitudeAndPhase[i] = m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase[count];
+	}
+
+}
+
 int ObservedData::getSourceID(int iSource) const {
 
 	return m_sourceID[iSource];
@@ -3151,11 +3463,24 @@ int ObservedData::getSourceID(int iSource) const {
 }
 
 bool ObservedData::isSourceAssignedToThisPE(int sourceID, double freq) const {
-	for (int i = 0; i < m_numStationsCSEMOfDifferentSource[sourceID]; ++i) {
-		int index = getGlobalStationIDFromSourceIDAndLocalID(sourceID, i);
-		if (m_observedStationCSEM[index].getFreqIDsAmongThisPE(freq) >= 0) {
-			return true;
+
+	if (m_numStationsCSEMOfDifferentSource != NULL) {
+		for (int i = 0; i < m_numStationsCSEMOfDifferentSource[sourceID]; ++i) {
+			int index = getGlobalStationIDFromSourceIDAndLocalID(sourceID, i);
+			if (m_observedStationCSEM[index].getFreqIDsAmongThisPE(freq) >= 0) {
+				return true;
+			}
 		}
 	}
+
+	if (m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase != NULL) {
+		for (int i = 0; i < m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase[sourceID]; ++i) {
+			int index = getGlobalStationIDFromSourceIDAndLocalID(sourceID, i);
+			if (m_observedStationCSEMAmplitudeAndPhase[index].getFreqIDsAmongThisPE(freq) >= 0) {
+				return true;
+			}
+		}
+	}
+
 	return false;
 }

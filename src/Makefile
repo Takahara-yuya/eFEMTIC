@@ -61,6 +61,7 @@ OBJS          = AnalysisControl.o \
                 ObservedDataStationPoint.o \
                 ObservedDataStationMT.o \
                 ObservedDataStationCSEM.o \
+		ObservedDataStationCSEMAmplitudeandPhase.o \
                 ObservedDataStationApparentResistivityAndPhase.o \
                 ObservedDataStationHTF.o \
                 ObservedDataStationVTF.o \

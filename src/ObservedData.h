@@ -59,6 +59,7 @@
 #include "ObservedDataStationPoint.h"
 #include "ObservedDataStationMT.h"
 #include "ObservedDataStationCSEM.h"
+#include "ObservedDataStationCSEMAmplitudeAndPhase.h"
 #include "ObservedDataStationApparentResistivityAndPhase.h"
 #include "ObservedDataStationHTF.h"
 #include "ObservedDataStationVTF.h"
@@ -89,6 +90,7 @@ public:
 		APP_RES_AND_PHS,
 		NMT2_APP_RES_AND_PHS,
 		CSEM,
+		CSEMAMPPHA,
 	};
 
 	// Input mesh data from "observe.dat"
@@ -217,11 +219,17 @@ public:
 	// Find local ID of source and station
 	int changeLocalSourceIDArrangeToGlobalSourceIDArrange(int sourceID, int iStation) const;
 
+	int changeLocalSourceIDArrangeToGlobalSourceIDArrangeAmplitudeAndPhase(int sourceID, int iStation) const;
+
 	// Find local ID of source and station
 	int localSourceStationNumToGlobalSourceStationNum() const;
 
+	int localSourceStationNumToGlobalSourceStationNumAmplitudeAndPhase() const;
+
 	// Find local ID of source and station
 	int getGlobalStationIDFromSourceIDAndLocalID(int iSource, int iStation) const;
+
+	int getGlobalStationIDFromSourceIDAndLocalIDAmplitudeAndPhase(int iSource, int iStation) const;
 
 	// return current source ID
 	int getSourceID(int iSource) const;
@@ -247,14 +255,22 @@ private:
 	// Number of usual CSEM stations
 	int* m_numStationsCSEMOfDifferentSource;
 
+	int* m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase;
+
 	int m_numStationsCSEM;
 
+	int m_numStationsCSEMAmplitudeAndPhase;
+
 	int* m_sourceIDOfStationPoint;
+
+	int* m_sourceIDOfStationPointAmplitudeAndPhase;
 
 	std::vector<int> m_sourceID;
 
 	// Number of usual CSEM stations
 	int* m_sourceIDStationNum;
+
+	int* m_sourceIDStationNumAmplitudeAndPhase;
 
 	// Number of usual MT stations
 	int m_numStationsMT;
@@ -288,6 +304,8 @@ private:
 
 	// Number of interpolator vectors
 	int* m_numCSEMInterpolatorVectors;
+
+	int* m_numCSEMInterpolatorVectorsAmplitudeAndPhase;
 
 	// Number of Arbitrary Electrical Dipoles
 	int m_numArbitraryElectricalDipole;
@@ -341,6 +359,8 @@ private:
 
 	// Observed data of CSEM station
 	ObservedDataStationCSEM* m_observedStationCSEM;
+
+	ObservedDataStationCSEMAmplitudeAndPhase* m_observedStationCSEMAmplitudeAndPhase;
 
 	// Observed data of MT station
 	ObservedDataStationMT* m_observedStationMT;

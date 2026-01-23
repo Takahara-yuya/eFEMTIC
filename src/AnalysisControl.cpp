@@ -2106,7 +2106,7 @@ void AnalysisControl::calcForwardComputation(const int iter) {
 				OutputFiles::m_logFile << "#================================================================================================" << std::endl;
 
 				ptrForward3D->forwardCalculation_CSEM(frquencyValue, iSource);
-
+			
 				pObservedData->calculateEMFieldOfAllStations(ptrForward3D, frquencyValue, iSource, ifreq);
 
 				if (doesCalculateSensitivity(iter)) {
