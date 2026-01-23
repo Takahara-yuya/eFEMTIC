@@ -3475,7 +3475,7 @@ bool ObservedData::isSourceAssignedToThisPE(int sourceID, double freq) const {
 
 	if (m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase != NULL) {
 		for (int i = 0; i < m_numStationsCSEMOfDifferentSourceAmplitudeAndPhase[sourceID]; ++i) {
-			int index = getGlobalStationIDFromSourceIDAndLocalID(sourceID, i);
+			int index = getGlobalStationIDFromSourceIDAndLocalIDAmplitudeAndPhase(sourceID, i);
 			if (m_observedStationCSEMAmplitudeAndPhase[index].getFreqIDsAmongThisPE(freq) >= 0) {
 				return true;
 			}
