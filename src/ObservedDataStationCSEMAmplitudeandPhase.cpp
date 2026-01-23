@@ -22,7 +22,7 @@
 #include <assert.h>
 #include <iomanip>
 
-#include "ObservedDataStationCSEMAmplitudeandPhase.h"
+#include "ObservedDataStationCSEMAmplitudeAndPhase.h"
 #include "ObservedDataStationPoint.h"
 #include "OutputFiles.h"
 #include "CommonParameters.h"
