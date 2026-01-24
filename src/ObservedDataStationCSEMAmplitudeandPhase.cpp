@@ -667,7 +667,7 @@ void ObservedDataStationCSEMAmplitudeAndPhase::calculateVerticalMagneticField(co
 void ObservedDataStationCSEMAmplitudeAndPhase::calculateDataTensor(const double freq, const ObservedDataStationPoint* const ptrStationOfMagneticField, int& icount) {
 
 	const int freqIDThisPEInSta = getFreqIDsAmongThisPE(freq);
-
+	OutputFiles::m_logFile << "freqIDGlobalInSta : " << freqIDThisPEInSta << " " << freq << std::endl;
 	if (freqIDThisPEInSta < 0) {// Specified frequency is not the ones calculated by this PE in this station 
 		return;
 	}
@@ -677,18 +677,10 @@ void ObservedDataStationCSEMAmplitudeAndPhase::calculateDataTensor(const double 
 	m_HxCalculatedCSEM[freqIDThisPEInSta] = ptrStationOfMagneticField->getHxCalculated(0);
 	m_HyCalculatedCSEM[freqIDThisPEInSta] = ptrStationOfMagneticField->getHyCalculated(0);
 
-	m_ExCalculatedAmplitude[freqIDThisPEInSta] = log10(std::abs(m_ExCalculated[freqIDGlobalInSta]));
-	m_ExCalculatedPhase[freqIDThisPEInSta] = CommonParameters::rad2deg * atan2(m_ExCalculated[freqIDGlobalInSta].imag(), m_ExCalculated[freqIDGlobalInSta].real());
-	m_EyCalculatedAmplitude[freqIDThisPEInSta] = log10(std::abs(m_EyCalculated[freqIDGlobalInSta]));
-	m_EyCalculatedPhase[freqIDThisPEInSta] = CommonParameters::rad2deg * atan2(m_EyCalculated[freqIDGlobalInSta].imag(), m_EyCalculated[freqIDGlobalInSta].real());
-	m_HxCalculatedAmplitude[freqIDThisPEInSta] = log10(std::abs(m_HxCalculatedCSEM[freqIDGlobalInSta]));
-	m_HxCalculatedPhase[freqIDThisPEInSta] = CommonParameters::rad2deg * atan2(m_HxCalculatedCSEM[freqIDGlobalInSta].imag(), m_HxCalculatedCSEM[freqIDGlobalInSta].real());
-	m_HyCalculatedAmplitude[freqIDThisPEInSta] = log10(std::abs(m_HyCalculatedCSEM[freqIDGlobalInSta]));
-	m_HyCalculatedPhase[freqIDThisPEInSta] = CommonParameters::rad2deg * atan2(m_HyCalculatedCSEM[freqIDGlobalInSta].imag(), m_HyCalculatedCSEM[freqIDGlobalInSta].real());
-	m_HzCalculatedAmplitude[freqIDThisPEInSta] = log10(std::abs(m_HzCalculated[freqIDGlobalInSta]));
-	m_HzCalculatedPhase[freqIDThisPEInSta] = CommonParameters::rad2deg * atan2(m_HzCalculated[freqIDGlobalInSta].imag(), m_HzCalculated[freqIDGlobalInSta].real());
 
 	if (m_useExData) {
+		m_ExCalculatedAmplitude[freqIDThisPEInSta] = log10(std::abs(m_ExCalculated[freqIDThisPEInSta]));
+		m_ExCalculatedPhase[freqIDThisPEInSta] = CommonParameters::rad2deg * atan2(m_ExCalculated[freqIDThisPEInSta].imag(), m_ExCalculated[freqIDThisPEInSta].real());
 		m_ExResidualAmplitude[freqIDThisPEInSta] = (m_ExObservedAmplitude[freqIDGlobalInSta] - m_ExCalculatedAmplitude[freqIDThisPEInSta]) / m_ExObservedAmplitudeSD[freqIDGlobalInSta];
 		m_ExResidualPhase[freqIDThisPEInSta] = (m_ExObservedPhase[freqIDGlobalInSta] - m_ExCalculatedPhase[freqIDThisPEInSta]) / m_ExObservedPhaseSD[freqIDGlobalInSta];
 		m_dataIDOfExAmplitude[freqIDThisPEInSta] = icount++;
@@ -696,6 +688,8 @@ void ObservedDataStationCSEMAmplitudeAndPhase::calculateDataTensor(const double 
 	}
 
 	if (m_useEyData) {
+		m_EyCalculatedAmplitude[freqIDThisPEInSta] = log10(std::abs(m_EyCalculated[freqIDThisPEInSta]));
+		m_EyCalculatedPhase[freqIDThisPEInSta] = CommonParameters::rad2deg * atan2(m_EyCalculated[freqIDThisPEInSta].imag(), m_EyCalculated[freqIDThisPEInSta].real());
 		m_EyResidualAmplitude[freqIDThisPEInSta] = (m_EyObservedAmplitude[freqIDGlobalInSta] - m_EyCalculatedAmplitude[freqIDThisPEInSta]) / m_EyObservedAmplitudeSD[freqIDGlobalInSta];
 		m_EyResidualPhase[freqIDThisPEInSta] = (m_EyObservedPhase[freqIDGlobalInSta] - m_EyCalculatedPhase[freqIDThisPEInSta]) / m_EyObservedPhaseSD[freqIDGlobalInSta];
 		m_dataIDOfEyAmplitude[freqIDThisPEInSta] = icount++;
@@ -703,6 +697,8 @@ void ObservedDataStationCSEMAmplitudeAndPhase::calculateDataTensor(const double 
 	}
 
 	if (m_useHxData) {
+		m_HxCalculatedAmplitude[freqIDThisPEInSta] = log10(std::abs(m_HxCalculatedCSEM[freqIDThisPEInSta]));
+		m_HxCalculatedPhase[freqIDThisPEInSta] = CommonParameters::rad2deg * atan2(m_HxCalculatedCSEM[freqIDThisPEInSta].imag(), m_HxCalculatedCSEM[freqIDThisPEInSta].real());
 		m_HxResidualAmplitude[freqIDThisPEInSta] = (m_HxObservedAmplitude[freqIDGlobalInSta] - m_HxCalculatedAmplitude[freqIDThisPEInSta]) / m_HxObservedAmplitudeSD[freqIDGlobalInSta];
 		m_HxResidualPhase[freqIDThisPEInSta] = (m_HxObservedPhase[freqIDGlobalInSta] - m_HxCalculatedPhase[freqIDThisPEInSta]) / m_HxObservedPhaseSD[freqIDGlobalInSta];
 		m_dataIDOfHxAmplitude[freqIDThisPEInSta] = icount++;
@@ -710,6 +706,8 @@ void ObservedDataStationCSEMAmplitudeAndPhase::calculateDataTensor(const double 
 	}
 
 	if (m_useHyData) {
+		m_HyCalculatedAmplitude[freqIDThisPEInSta] = log10(std::abs(m_HyCalculatedCSEM[freqIDThisPEInSta]));
+		m_HyCalculatedPhase[freqIDThisPEInSta] = CommonParameters::rad2deg * atan2(m_HyCalculatedCSEM[freqIDThisPEInSta].imag(), m_HyCalculatedCSEM[freqIDThisPEInSta].real());
 		m_HyResidualAmplitude[freqIDThisPEInSta] = (m_HyObservedAmplitude[freqIDGlobalInSta] - m_HyCalculatedAmplitude[freqIDThisPEInSta]) / m_HyObservedAmplitudeSD[freqIDGlobalInSta];
 		m_HyResidualPhase[freqIDThisPEInSta] = (m_HyObservedPhase[freqIDGlobalInSta] - m_HyCalculatedPhase[freqIDThisPEInSta]) / m_HyObservedPhaseSD[freqIDGlobalInSta];
 		m_dataIDOfHyAmplitude[freqIDThisPEInSta] = icount++;
@@ -717,6 +715,8 @@ void ObservedDataStationCSEMAmplitudeAndPhase::calculateDataTensor(const double 
 	}
 
 	if (m_useHzData) {
+		m_HzCalculatedAmplitude[freqIDThisPEInSta] = log10(std::abs(m_HzCalculated[freqIDThisPEInSta]));
+		m_HzCalculatedPhase[freqIDThisPEInSta] = CommonParameters::rad2deg * atan2(m_HzCalculated[freqIDThisPEInSta].imag(), m_HzCalculated[freqIDThisPEInSta].real());
 		m_HzResidualAmplitude[freqIDThisPEInSta] = (m_HzObservedAmplitude[freqIDGlobalInSta] - m_HzCalculatedAmplitude[freqIDThisPEInSta]) / m_HzObservedAmplitudeSD[freqIDGlobalInSta];
 		m_HzResidualPhase[freqIDThisPEInSta] = (m_HzObservedPhase[freqIDGlobalInSta] - m_HzCalculatedPhase[freqIDThisPEInSta]) / m_HzObservedPhaseSD[freqIDGlobalInSta];
 		m_dataIDOfHzAmplitude[freqIDThisPEInSta] = icount++;
