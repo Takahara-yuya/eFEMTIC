@@ -667,7 +667,6 @@ void ObservedDataStationCSEMAmplitudeAndPhase::calculateVerticalMagneticField(co
 void ObservedDataStationCSEMAmplitudeAndPhase::calculateDataTensor(const double freq, const ObservedDataStationPoint* const ptrStationOfMagneticField, int& icount) {
 
 	const int freqIDThisPEInSta = getFreqIDsAmongThisPE(freq);
-	OutputFiles::m_logFile << "freqIDGlobalInSta : " << freqIDThisPEInSta << " " << freq << std::endl;
 	if (freqIDThisPEInSta < 0) {// Specified frequency is not the ones calculated by this PE in this station 
 		return;
 	}
