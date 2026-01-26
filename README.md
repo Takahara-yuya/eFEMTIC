@@ -9,7 +9,7 @@ The module is designed to work seamlessly with the existing FEM-based infrastruc
 # Release note  
 v4.3.0-e1.0 (Jan. 1, 2026): Supports forward modeling and inversion of Controlled-Source Electromagnetic (CSEM) problems with arbitrary-shaped electric and magnetic sources under Tetrahedral mesh.   
  
-#-------------------------------------------------------------------------------------------------------  
+# Connect with Me
 ​Zuwei Huang​ – Implemented and integrated the CSEM module (2026)  
 Original framework by ​Yoshiya Usui​ (Copyright © 2021)  
 If you encounter any issues, have questions, or want to provide feedback, please feel free to contact:  
