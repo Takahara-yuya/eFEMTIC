@@ -5,6 +5,9 @@ For more information about the FEMTIC code, please refer to the original FEMTIC 
 --->>> 
 This release introduces a new ​CSEM module​ integrated into the FEMTIC framework, enabling electromagnetic modeling and simulation workflows.  
 The module is designed to work seamlessly with the existing FEM-based infrastructure and is aimed at geophysical, engineering, or scientific computing applications.  
+
+# Release note  
+v4.3.0-e1.0 (Jan. 1, 2026): Supports forward modeling and inversion of Controlled-Source Electromagnetic (CSEM) problems with arbitrary-shaped electric and magnetic sources under Tetrahedral mesh.   
  
 #-------------------------------------------------------------------------------------------------------  
 ​Zuwei Huang​ – Implemented and integrated the CSEM module (2026)  
