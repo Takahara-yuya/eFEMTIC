@@ -175,7 +175,7 @@ static char programName[]="efemtic";
 // [MajorVersion#].[MinorVersion#].[Revision#]
 // x.x.xa -> alpha version
 // x.x.xb -> beta version
-static char versionID[] = "4.3.2b (CSEM Integrated)";
+static char versionID[] = "4.3.0-e1.0";
 
 }
 
