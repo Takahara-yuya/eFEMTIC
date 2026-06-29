@@ -1,19 +1,8 @@
 //-------------------------------------------------------------------------------------------------------
-// This file is part of eFEMTIC
+// This module provides CSEM (Controlled Source Electromagnetics) modeling capabilities within FEMTIC.
+// Implemented by Zuwei Huang, 2025.
 //
-// Copyright (C) 2025 Zuwei Huang
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// For support, bug reports, or questions, please contact the author at: hzw1498218560@tongji.edu.cn
 //-------------------------------------------------------------------------------------------------------
 #include <fstream>
 #include <iostream>
@@ -27,6 +16,45 @@
 #include "OutputFiles.h"
 #include "CommonParameters.h"
 #include "ResistivityBlock.h"
+
+namespace {
+
+bool isValidCSEMComplexDataType(const int dataType) {
+	switch (dataType) {
+	case ObservedDataStationCSEM::EX_COMPLEX:
+	case ObservedDataStationCSEM::EY_COMPLEX:
+	case ObservedDataStationCSEM::HX_COMPLEX:
+	case ObservedDataStationCSEM::HY_COMPLEX:
+	case ObservedDataStationCSEM::HZ_COMPLEX:
+		return true;
+	default:
+		return false;
+	}
+}
+
+void checkPositiveStandardDeviation(const double sd, const char* component, const char* part,
+	const int sourceID, const int stationID, const double freq) {
+
+	if (sd <= 0.0) {
+		OutputFiles::m_logFile << "Error : Non-positive standard deviation for "
+			<< component << " " << part
+			<< " of CSEM data. Source ID = " << sourceID
+			<< ", Station ID = " << stationID
+			<< ", Frequency = " << freq << " [Hz]." << std::endl;
+		exit(1);
+	}
+
+}
+
+void checkPositiveComplexStandardDeviation(const CommonParameters::DoubleComplexValues& sd,
+	const char* component, const int sourceID, const int stationID, const double freq) {
+
+	checkPositiveStandardDeviation(sd.realPart, component, "real", sourceID, stationID, freq);
+	checkPositiveStandardDeviation(sd.imagPart, component, "imaginary", sourceID, stationID, freq);
+
+}
+
+}
 
 // Constructer
 ObservedDataStationCSEM::ObservedDataStationCSEM() :
@@ -54,6 +82,7 @@ ObservedDataStationCSEM::ObservedDataStationCSEM() :
 	m_HzResidual(NULL),
 	m_rhsVectorIDOfEx(0),
 	m_rhsVectorIDOfEy(0),
+	m_rhsVectorIDOfHz(-1),
 	m_nTypeOfData(0),
 	m_dataIDOfEx(NULL),
 	m_dataIDOfEy(NULL),
@@ -71,11 +100,8 @@ ObservedDataStationCSEM::ObservedDataStationCSEM() :
 	m_arrayGainsAndRotations(NULL)
 {
 
-	if ((AnalysisControl::getInstance())->getTypeOfDistortion() == AnalysisControl::DISTORTION_TYPE_UNDEFINED) {
-		OutputFiles::m_logFile << "Error : Type of distortion must be defined before instantiation of ObservedDataStationMT !!" << std::endl;
-		exit(1);
-	}
-	else if ((AnalysisControl::getInstance())->getTypeOfDistortion() == AnalysisControl::ESTIMATE_DISTORTION_MATRIX_DIFFERENCE) {
+	const int typeOfDistortion = (AnalysisControl::getInstance())->getTypeOfDistortion();
+	if (typeOfDistortion == AnalysisControl::ESTIMATE_DISTORTION_MATRIX_DIFFERENCE) {
 		m_arrayDistortionMatrixDifferences = new DistortionMatrixDifferences;
 		for (int i = 0; i < 4; ++i) {
 			m_arrayDistortionMatrixDifferences->distortionMatrixDifferencePre[i] = 0.0;
@@ -84,8 +110,8 @@ ObservedDataStationCSEM::ObservedDataStationCSEM() :
 			m_arrayDistortionMatrixDifferences->IDsOfDistortionMatrixDifference[i] = -1;
 		}
 	}
-	else if ((AnalysisControl::getInstance())->getTypeOfDistortion() == AnalysisControl::ESTIMATE_GAINS_AND_ROTATIONS ||
-		(AnalysisControl::getInstance())->getTypeOfDistortion() == AnalysisControl::ESTIMATE_GAINS_ONLY) {
+	else if (typeOfDistortion == AnalysisControl::ESTIMATE_GAINS_AND_ROTATIONS ||
+		typeOfDistortion == AnalysisControl::ESTIMATE_GAINS_ONLY) {
 		m_arrayGainsAndRotations = new GainsAndRotations;
 		for (int i = 0; i < 4; ++i) {
 			m_arrayGainsAndRotations->gainsAndRotationsPre[i] = 0.0;
@@ -318,6 +344,13 @@ void ObservedDataStationCSEM::inputObservedData(std::ifstream& inFile) {
 	m_dataTypeToBeUsed = new int[m_nTypeOfData];
 	for (int i = 0; i < m_nTypeOfData; i++) {
 		inFile >> m_dataTypeToBeUsed[i];
+		if (!isValidCSEMComplexDataType(m_dataTypeToBeUsed[i])) {
+			OutputFiles::m_logFile << "Error : Unknown CSEM complex data type "
+				<< m_dataTypeToBeUsed[i]
+				<< " at source ID " << m_sourceID
+				<< ", station ID " << m_stationID << "." << std::endl;
+			exit(1);
+		}
 	}
 	if (isDataTypeDuplicated(m_dataTypeToBeUsed)) {
 		OutputFiles::m_logFile << "CSEM data type duplicated in station: " << m_stationID << " !!" << std::endl;
@@ -433,6 +466,21 @@ void ObservedDataStationCSEM::inputObservedData(std::ifstream& inFile) {
 					inFile >> m_HzSD[i].imagPart;
 					break;
 				}
+			}
+			if (m_useExData) {
+				checkPositiveComplexStandardDeviation(m_ExSD[i], "Ex", m_sourceID, m_stationID, m_freq[i]);
+			}
+			if (m_useEyData) {
+				checkPositiveComplexStandardDeviation(m_EySD[i], "Ey", m_sourceID, m_stationID, m_freq[i]);
+			}
+			if (m_useHxData) {
+				checkPositiveComplexStandardDeviation(m_HxSD[i], "Hx", m_sourceID, m_stationID, m_freq[i]);
+			}
+			if (m_useHyData) {
+				checkPositiveComplexStandardDeviation(m_HySD[i], "Hy", m_sourceID, m_stationID, m_freq[i]);
+			}
+			if (m_useHzData) {
+				checkPositiveComplexStandardDeviation(m_HzSD[i], "Hz", m_sourceID, m_stationID, m_freq[i]);
 			}
 		}
 	}
@@ -670,7 +718,7 @@ void ObservedDataStationCSEM::initializeDataTensorsAndErrors() {
 		m_HxResidual[i].imagPart = 0.0;
 		m_HyResidual[i].realPart = 0.0;
 		m_HyResidual[i].imagPart = 0.0;
-		m_HzResidual[i].imagPart = 0.0;
+		m_HzResidual[i].realPart = 0.0;
 		m_HzResidual[i].imagPart = 0.0;
 
 		m_ExCalculated[i] = std::complex<double>(0.0, 0.0);
@@ -945,10 +993,17 @@ void ObservedDataStationCSEM::calculateSensitivityMatrix(const double freq, cons
 		return;
 	}
 
-	//sourceID
-	int iSource = m_iSource;
-
 	const int freqIDGlobalInSta = m_freqIDsAmongThisStationCalculatedByThisPE[freqIDThisPEInSta];
+	const double ExSDReal = forceSDToOne ? 1.0 : m_ExSD[freqIDGlobalInSta].realPart;
+	const double ExSDImag = forceSDToOne ? 1.0 : m_ExSD[freqIDGlobalInSta].imagPart;
+	const double EySDReal = forceSDToOne ? 1.0 : m_EySD[freqIDGlobalInSta].realPart;
+	const double EySDImag = forceSDToOne ? 1.0 : m_EySD[freqIDGlobalInSta].imagPart;
+	const double HxSDReal = forceSDToOne ? 1.0 : m_HxSD[freqIDGlobalInSta].realPart;
+	const double HxSDImag = forceSDToOne ? 1.0 : m_HxSD[freqIDGlobalInSta].imagPart;
+	const double HySDReal = forceSDToOne ? 1.0 : m_HySD[freqIDGlobalInSta].realPart;
+	const double HySDImag = forceSDToOne ? 1.0 : m_HySD[freqIDGlobalInSta].imagPart;
+	const double HzSDReal = forceSDToOne ? 1.0 : m_HzSD[freqIDGlobalInSta].realPart;
+	const double HzSDImag = forceSDToOne ? 1.0 : m_HzSD[freqIDGlobalInSta].imagPart;
 
 	const long long rhsVectorIDOfHx = static_cast<long long>(ptrStationOfMagneticField->getRhsVectorIDOfHx());
 	const long long rhsVectorIDOfHy = static_cast<long long>(ptrStationOfMagneticField->getRhsVectorIDOfHy());
@@ -956,24 +1011,24 @@ void ObservedDataStationCSEM::calculateSensitivityMatrix(const double freq, cons
 
 	for (long long imdl = 0; imdl < nBlkNotFixed; ++imdl) {
 		if (m_useExData) {
-			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfEx[freqIDThisPEInSta].realPart) + imdl] = derivativesOfEMField[nBlkNotFixed * m_rhsVectorIDOfEx + imdl].real() / m_ExSD[freqIDGlobalInSta].realPart;
-			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfEx[freqIDThisPEInSta].imagPart) + imdl] = derivativesOfEMField[nBlkNotFixed * m_rhsVectorIDOfEx + imdl].imag() / m_ExSD[freqIDGlobalInSta].imagPart;
+			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfEx[freqIDThisPEInSta].realPart) + imdl] = derivativesOfEMField[nBlkNotFixed * m_rhsVectorIDOfEx + imdl].real() / ExSDReal;
+			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfEx[freqIDThisPEInSta].imagPart) + imdl] = derivativesOfEMField[nBlkNotFixed * m_rhsVectorIDOfEx + imdl].imag() / ExSDImag;
 		}
 		if (m_useEyData) {
-			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfEy[freqIDThisPEInSta].realPart) + imdl] = derivativesOfEMField[nBlkNotFixed * m_rhsVectorIDOfEy + imdl].real() / m_EySD[freqIDGlobalInSta].realPart;
-			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfEy[freqIDThisPEInSta].imagPart) + imdl] = derivativesOfEMField[nBlkNotFixed * m_rhsVectorIDOfEy + imdl].imag() / m_EySD[freqIDGlobalInSta].imagPart;
+			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfEy[freqIDThisPEInSta].realPart) + imdl] = derivativesOfEMField[nBlkNotFixed * m_rhsVectorIDOfEy + imdl].real() / EySDReal;
+			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfEy[freqIDThisPEInSta].imagPart) + imdl] = derivativesOfEMField[nBlkNotFixed * m_rhsVectorIDOfEy + imdl].imag() / EySDImag;
 		}
 		if (m_useHxData) {
-			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfHx[freqIDThisPEInSta].realPart) + imdl] = derivativesOfEMField[nBlkNotFixed * rhsVectorIDOfHx + imdl].real() / m_HxSD[freqIDGlobalInSta].realPart;
-			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfHx[freqIDThisPEInSta].imagPart) + imdl] = derivativesOfEMField[nBlkNotFixed * rhsVectorIDOfHx + imdl].imag() / m_HxSD[freqIDGlobalInSta].imagPart;
+			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfHx[freqIDThisPEInSta].realPart) + imdl] = derivativesOfEMField[nBlkNotFixed * rhsVectorIDOfHx + imdl].real() / HxSDReal;
+			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfHx[freqIDThisPEInSta].imagPart) + imdl] = derivativesOfEMField[nBlkNotFixed * rhsVectorIDOfHx + imdl].imag() / HxSDImag;
 		}
 		if (m_useHyData) {
-			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfHy[freqIDThisPEInSta].realPart) + imdl] = derivativesOfEMField[nBlkNotFixed * rhsVectorIDOfHy + imdl].real() / m_HySD[freqIDGlobalInSta].realPart;
-			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfHy[freqIDThisPEInSta].imagPart) + imdl] = derivativesOfEMField[nBlkNotFixed * rhsVectorIDOfHy + imdl].imag() / m_HySD[freqIDGlobalInSta].imagPart;
+			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfHy[freqIDThisPEInSta].realPart) + imdl] = derivativesOfEMField[nBlkNotFixed * rhsVectorIDOfHy + imdl].real() / HySDReal;
+			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfHy[freqIDThisPEInSta].imagPart) + imdl] = derivativesOfEMField[nBlkNotFixed * rhsVectorIDOfHy + imdl].imag() / HySDImag;
 		}
 		if (m_useHzData) {
-			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfHz[freqIDThisPEInSta].realPart) + imdl] = derivativesOfEMField[nBlkNotFixed * m_rhsVectorIDOfHz + imdl].real() / m_HzSD[freqIDGlobalInSta].realPart;
-			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfHz[freqIDThisPEInSta].imagPart) + imdl] = derivativesOfEMField[nBlkNotFixed * m_rhsVectorIDOfHz + imdl].imag() / m_HzSD[freqIDGlobalInSta].imagPart;
+			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfHz[freqIDThisPEInSta].realPart) + imdl] = derivativesOfEMField[nBlkNotFixed * m_rhsVectorIDOfHz + imdl].real() / HzSDReal;
+			sensitivityMatrix[static_cast<long long>(nModel) * static_cast<long long>(m_dataIDOfHz[freqIDThisPEInSta].imagPart) + imdl] = derivativesOfEMField[nBlkNotFixed * m_rhsVectorIDOfHz + imdl].imag() / HzSDImag;
 		}
 	}
 
@@ -1333,7 +1388,7 @@ double ObservedDataStationCSEM::calculateErrorSumOfSquaresThisPE() const {
 			misfit += pow(m_HyResidual[ifreq].imagPart, 2);
 		}
 		if (m_useHzData) {
-			misfit += pow(m_HzResidual[ifreq].imagPart, 2);
+			misfit += pow(m_HzResidual[ifreq].realPart, 2);
 			misfit += pow(m_HzResidual[ifreq].imagPart, 2);
 		}
 	}
@@ -1622,7 +1677,8 @@ void ObservedDataStationCSEM::updateDistortionParams(const double dampingFactor)
 
 // Get distortion parameters of previous iteration
 double ObservedDataStationCSEM::getDistortionParamsPre(const int iComp) const {
-
+	(void)iComp;
+	return 0.0;
 	//const int type = (AnalysisControl::getInstance())->getTypeOfDistortion();
 	//if (type == AnalysisControl::ESTIMATE_DISTORTION_MATRIX_DIFFERENCE) {
 	//	assert(m_arrayDistortionMatrixDifferences != NULL);
@@ -1653,7 +1709,8 @@ double ObservedDataStationCSEM::getDistortionParamsPre(const int iComp) const {
 
 // Get distortion parameters
 double ObservedDataStationCSEM::getDistortionParams(const int iComp) const {
-
+	(void)iComp;
+	return 0.0;
 	/*const int type = (AnalysisControl::getInstance())->getTypeOfDistortion();
 	if (type == AnalysisControl::ESTIMATE_DISTORTION_MATRIX_DIFFERENCE) {
 		assert(m_arrayDistortionMatrixDifferences != NULL);
@@ -1684,7 +1741,8 @@ double ObservedDataStationCSEM::getDistortionParams(const int iComp) const {
 
 // Get ID of distortion parameters
 int ObservedDataStationCSEM::getIDOfDistortionParams(const int iComp) const {
-
+	(void)iComp;
+	return -1;
 	/*const int type = (AnalysisControl::getInstance())->getTypeOfDistortion();
 	if (type == AnalysisControl::ESTIMATE_DISTORTION_MATRIX_DIFFERENCE) {
 		assert(m_arrayDistortionMatrixDifferences != NULL);
@@ -1714,7 +1772,8 @@ int ObservedDataStationCSEM::getIDOfDistortionParams(const int iComp) const {
 
 // Get full updated value of distortion parameters
 double ObservedDataStationCSEM::getDistortionParamsUpdatedFull(const int iComp) const {
-
+	(void)iComp;
+	return 0.0;
 	/*const int type = (AnalysisControl::getInstance())->getTypeOfDistortion();
 	if (type == AnalysisControl::ESTIMATE_DISTORTION_MATRIX_DIFFERENCE) {
 		assert(m_arrayDistortionMatrixDifferences != NULL);
